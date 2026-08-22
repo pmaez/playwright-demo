@@ -95,9 +95,21 @@ Run any subset directly with Playwright's `--grep`:
 npx playwright test --grep @smoke
 ```
 
+## Continuous integration
+
+`.github/workflows/playwright.yml` runs on GitHub Actions:
+
+- **Pull requests** run `@smoke`-tagged tests only (Chromium), for fast feedback.
+- **Pushes to `master`/`dev`** and manual runs (`workflow_dispatch`) run the full cross-browser suite.
+- Manual runs let you pick the `TEST_ENV` (`demo`, `dev`, `qa`, `uat`) from a dropdown.
+- Playwright browsers are cached by version; the HTML report and `test-results/` (traces on retry) are uploaded as workflow artifacts on every run.
+
 ## Project structure
 
 ```
+.github/
+  workflows/
+    playwright.yml       # CI workflow (see Continuous integration above)
 config/
   environments.ts       # Per-environment base URLs and tags
 runner/
