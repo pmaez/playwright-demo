@@ -1,0 +1,18 @@
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# OS / editor
+.DS_Store
+
+# Local Playwright CLI/agent session artifacts
+.playwright/
+.playwright-cli/
+
+# Test-run video recordings
+videos/

@@ -1,0 +1,25 @@
+{
+  "name": "playwright",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test --project chromium",
+    "test:all-browsers": "playwright test",
+    "test:ui": "playwright test --project chromium --ui",
+    "test:headed": "playwright test --project chromium --headed",
+    "test:smoke": "playwright test --project chromium --grep @smoke",
+    "test:functional": "playwright test --project chromium --grep @functional",
+    "test:tag": "playwright test --project chromium --grep",
+    "test:report": "playwright show-report",
+    "runner": "node runner/execution.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^26.2.0"
+  }
+}
