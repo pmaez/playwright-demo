@@ -7,24 +7,26 @@ export type TestEnvironment = {
 };
 
 const environments: Record<TestEnvironmentName, TestEnvironment> = {
+  // Working out of the box against the live TodoMVC demo — the bundled example.
   demo: {
     name: 'demo',
     baseURL: 'https://demo.playwright.dev',
     tags: ['@demo_env'],
   },
+  // Placeholders — point these at your application's real per-environment URLs.
   dev: {
     name: 'dev',
-    baseURL: 'https://demo.playwright.dev',
+    baseURL: 'https://dev.example.com',
     tags: ['@dev_env'],
   },
   qa: {
     name: 'qa',
-    baseURL: 'https://demo.playwright.dev',
+    baseURL: 'https://qa.example.com',
     tags: ['@qa_env'],
   },
   uat: {
     name: 'uat',
-    baseURL: 'https://demo.playwright.dev',
+    baseURL: 'https://uat.example.com',
     tags: ['@uat_env'],
   },
 };

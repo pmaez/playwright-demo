@@ -49,10 +49,10 @@ check the actual DOM/accessibility tree (`playwright-cli snapshot`, or
 `page.locator(...).ariaSnapshot()`) rather than guessing.
 
 ```ts
-// tests/pages/todo-page.ts
+// tests/pages/example-page.ts
 import { Page, Locator } from '@playwright/test';
 
-export class TodoPage {
+export class ExamplePage {
   readonly newTodoInput: Locator;
   readonly todoTitles: Locator;
   readonly itemsLeftCount: Locator;
@@ -75,16 +75,16 @@ export class TodoPage {
 ```
 
 ```ts
-// tests/todo/should-add-single-todo.spec.ts
-import { test, expect } from '../fixtures';
+// tests/functional/example/should-add-item.spec.ts
+import { test, expect } from '../../fixtures';
 
-test.describe('Add todo', () => {
-  test('should add single todo', async ({ todoPage }) => {
-    await todoPage.addTodo('Buy milk');
+test.describe('Add item', () => {
+  test('should add single item', async ({ examplePage }) => {
+    await examplePage.addTodo('Buy milk');
 
-    await expect(todoPage.todoTitles).toHaveText('Buy milk');
-    await expect(todoPage.newTodoInput).toBeEmpty();
-    await expect(todoPage.itemsLeftCount).toHaveText('1 item left');
+    await expect(examplePage.todoTitles).toHaveText('Buy milk');
+    await expect(examplePage.newTodoInput).toBeEmpty();
+    await expect(examplePage.itemsLeftCount).toHaveText('1 item left');
   });
 });
 ```
@@ -97,16 +97,16 @@ Objects instead of a raw `page`, keeping navigation/setup in one place:
 ```ts
 // tests/fixtures.ts
 import { test as baseTest } from '@playwright/test';
-import { TodoPage } from './pages/todo-page';
+import { ExamplePage } from './pages/example-page';
 export { expect } from '@playwright/test';
 
-export const test = baseTest.extend<{ todoPage: TodoPage }>({
+export const test = baseTest.extend<{ examplePage: ExamplePage }>({
   page: async ({ page }, use) => {
     await page.goto('https://demo.playwright.dev/todomvc');
     await use(page);
   },
-  todoPage: async ({ page }, use) => {
-    await use(new TodoPage(page));
+  examplePage: async ({ page }, use) => {
+    await use(new ExamplePage(page));
   },
 });
 ```
@@ -116,8 +116,8 @@ export const test = baseTest.extend<{ todoPage: TodoPage }>({
   shared across tests in the same worker (e.g. an authenticated API client) —
   never for anything that holds page/UI state, since workers run tests serially
   but reuse the fixture across them.
-- Keep the seed test (`tests/seed.spec.ts`) as the one place that documents the
-  fresh starting state; fixtures should reproduce exactly what it does.
+- Keep the seed test (`tests/_seed/seed.spec.ts`) as the one place that documents
+  the fresh starting state; fixtures should reproduce exactly what it does.
 
 ## Data-driven tests
 
@@ -131,9 +131,9 @@ const cases = [
 ];
 
 for (const { input, expectedCount } of cases) {
-  test(`should add todo "${input.trim()}"`, async ({ todoPage }) => {
-    await todoPage.addTodo(input);
-    await expect(todoPage.itemsLeftCount).toHaveText(expectedCount);
+  test(`should add item "${input.trim()}"`, async ({ examplePage }) => {
+    await examplePage.addTodo(input);
+    await expect(examplePage.itemsLeftCount).toHaveText(expectedCount);
   });
 }
 ```
@@ -151,8 +151,8 @@ Tag tests to allow selective runs (smoke vs full regression, slow vs fast) using
 Playwright's native tag option — don't encode tags into titles as free text:
 
 ```ts
-test.describe('Add todo', { tag: '@add' }, () => {
-  test('should add single todo', { tag: '@single' }, async ({ todoPage }) => { ... });
+test.describe('Add item', { tag: '@add' }, () => {
+  test('should add single item', { tag: '@single' }, async ({ examplePage }) => { ... });
 });
 ```
 

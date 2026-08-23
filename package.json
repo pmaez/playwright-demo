@@ -1,7 +1,7 @@
 {
-  "name": "playwright",
+  "name": "playwright-automation-template",
   "version": "1.0.0",
-  "description": "",
+  "description": "Template Playwright end-to-end test automation framework",
   "main": "index.js",
   "scripts": {
     "test": "playwright test --project chromium",

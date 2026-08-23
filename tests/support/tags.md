@@ -16,12 +16,13 @@ Use tags to describe where a test runs, what suite it belongs to, and what behav
 
 ## Domain
 
-- `@todo`
+Domain tags are project-specific — define your own per feature/module (e.g. `@cart`, `@login`, `@checkout`). The bundled example uses:
+
+- `@example`
 - `@add`
 - `@delete`
 - `@single`
 - `@multiple`
-- `@bug`
 
 Run tagged tests with Playwright directly:
 

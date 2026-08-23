@@ -1,6 +1,8 @@
-# Playwright Demo
+# Playwright Automation Template
 
-Automated end-to-end test suite for the TodoMVC demo application, built with [Playwright](https://playwright.dev). It covers the add-todo and delete-todo flows (single and multiple item variants) using a Page Object Model, composable fixtures, and a tagged test suite for selective runs.
+A template end-to-end test automation framework built with [Playwright](https://playwright.dev). It ships a Page Object Model, composable fixtures, per-environment configuration, a tagged test suite, and a CI workflow — all ready to point at your own application.
+
+The bundled `example` domain runs against the public [TodoMVC demo](https://demo.playwright.dev/todomvc) so the framework works out of the box. Replace it with your own domain by following the same pattern (see [Extending this template](#extending-this-template)).
 
 ## Requirements
 
@@ -41,7 +43,7 @@ npm run test:smoke
 npm run test:functional
 
 # Run tests matching an arbitrary tag
-npm run test:tag -- @todo
+npm run test:tag -- @example
 
 # View the HTML report from the last run
 npm run test:report
@@ -65,7 +67,7 @@ Options:
 | `--headed`  | run headed                        | off     |
 | `--ui`      | open Playwright UI mode           | off     |
 
-Multiple tags are combined with AND semantics — `--tags smoke,todo` runs only tests carrying both `@smoke` and `@todo`.
+Multiple tags are combined with AND semantics — `--tags smoke,example` runs only tests carrying both `@smoke` and `@example`.
 
 ## Environments
 
@@ -74,6 +76,8 @@ Environment configuration lives in `config/environments.ts` and is selected via 
 ```bash
 TEST_ENV=qa npm test
 ```
+
+`demo` points at the live TodoMVC app so the suite runs out of the box. `dev`, `qa`, and `uat` are placeholders (`https://{env}.example.com`) — swap in your application's real per-environment URLs.
 
 The base URL can also be overridden directly with `BASE_URL`, which takes precedence over the environment's configured URL:
 
@@ -87,7 +91,7 @@ Tests are tagged along three axes so subsets can be run independently. See `test
 
 - **Environment** — `@demo_env`, `@dev_env`, `@qa_env`, `@uat_env`
 - **Suite** — `@smoke`, `@functional`
-- **Domain** — `@todo`, `@add`, `@delete`, `@single`, `@multiple`, `@bug`
+- **Domain** — project-specific (e.g. `@example`, `@add`, `@delete`); define your own per feature/module
 
 Run any subset directly with Playwright's `--grep`:
 
@@ -115,23 +119,36 @@ config/
 runner/
   execution.js           # CLI wrapper around `playwright test`
 specs/
-  todo.plan.md            # Test plan the specs are written against
+  example.plan.md         # Test plan the example specs are written against
 tests/
   fixtures.ts              # Custom test/page fixtures
   pages/
-    todo-page.ts             # Page Object for the TodoMVC page
+    example-page.ts           # Page Object for the example domain
   flows/
-    todo-flow.ts              # Multi-step actions built on the page object
+    example-flow.ts            # Multi-step actions built on the page object
   data/
-    todo-data.ts               # Shared test data
+    example-data.ts              # Shared test data
   functional/
-    todo/                       # Functional specs (add/delete)
+    example/                      # Functional specs (add/delete)
   _seed/
-    seed.spec.ts                # Documents the fresh starting state
+    seed.spec.ts                    # Documents the fresh starting state
   support/
-    tags.md                      # Tag vocabulary reference
+    tags.md                          # Tag vocabulary reference
 ```
 
 ## Test plan
 
-`specs/todo.plan.md` documents the scenarios each spec file implements, including setup steps and expected outcomes. Each spec file references its source plan and seed via header comments.
+`specs/example.plan.md` documents the scenarios the example specs implement, including setup steps and expected outcomes. Each spec file references its source plan and seed via header comments.
+
+## Extending this template
+
+To add a new domain (e.g. `cart`), mirror the `example` structure:
+
+1. **Page object** — `tests/pages/cart-page.ts`, a class wrapping locators and low-level actions for one page/component.
+2. **Flow** (optional) — `tests/flows/cart-flow.ts`, multi-step actions composed from one or more page objects.
+3. **Test data** — `tests/data/cart-data.ts`, shared fixtures/constants for the domain.
+4. **Fixtures** — register the page object (and flow) in `tests/fixtures.ts` so specs can request them by name.
+5. **Plan** — `specs/cart.plan.md`, the scenarios and expected outcomes each spec implements.
+6. **Specs** — `tests/functional/cart/*.spec.ts`, referencing the plan and seed via header comments (`// spec: ...`, `// seed: ...`) and tagged per the conventions in `tests/support/tags.md`.
+
+You can run the `example` domain and a new domain side by side — nothing in the framework layer (fixtures composition, environments, runner, tagging, CI) is domain-specific. Remove the `example` files once you no longer need them as a reference.

@@ -1,13 +1,13 @@
 import { test as baseTest } from '@playwright/test';
-import { TodoPage } from './pages/todo-page';
-import { TodoFlow } from './flows/todo-flow';
+import { ExamplePage } from './pages/example-page';
+import { ExampleFlow } from './flows/example-flow';
 import { getTestEnvironment, TestEnvironment } from '../config/environments';
 export { expect } from '@playwright/test';
 
 type Fixtures = {
   testEnvironment: TestEnvironment;
-  todoPage: TodoPage;
-  todoFlow: TodoFlow;
+  examplePage: ExamplePage;
+  exampleFlow: ExampleFlow;
 };
 
 export const test = baseTest.extend<Fixtures>({
@@ -18,10 +18,10 @@ export const test = baseTest.extend<Fixtures>({
     await page.goto('/todomvc');
     await use(page);
   },
-  todoPage: async ({ page }, use) => {
-    await use(new TodoPage(page));
+  examplePage: async ({ page }, use) => {
+    await use(new ExamplePage(page));
   },
-  todoFlow: async ({ todoPage }, use) => {
-    await use(new TodoFlow(todoPage));
+  exampleFlow: async ({ examplePage }, use) => {
+    await use(new ExampleFlow(examplePage));
   },
 });
