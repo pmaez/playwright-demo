@@ -12,7 +12,8 @@
     "test:functional": "playwright test --project chromium --grep @functional",
     "test:tag": "playwright test --project chromium --grep",
     "test:report": "playwright show-report",
-    "runner": "node runner/execution.js"
+    "runner": "node runner/execution.js",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",
@@ -20,6 +21,7 @@
   "type": "commonjs",
   "devDependencies": {
     "@playwright/test": "^1.62.1",
-    "@types/node": "^26.2.0"
+    "@types/node": "^26.2.0",
+    "typescript": "^7.0.2"
   }
 }

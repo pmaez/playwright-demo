@@ -45,6 +45,9 @@ npm run test:functional
 # Run tests matching an arbitrary tag
 npm run test:tag -- @example
 
+# Run TypeScript validation
+npm run typecheck
+
 # View the HTML report from the last run
 npm run test:report
 ```
