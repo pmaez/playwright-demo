@@ -13,6 +13,7 @@ node_modules/
 # Local Playwright CLI/agent session artifacts
 .playwright/
 .playwright-cli/
+.playwright-mcp/
 
 # Test-run video recordings
 videos/
