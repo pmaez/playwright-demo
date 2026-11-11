@@ -453,7 +453,7 @@ From a cold start (Mac rebooted or Docker Desktop quit):
    kubectl wait --for=condition=Ready node --all --timeout=180s
    ```
 
-   If this reports `connection refused`, check `docker desktop kubernetes status`. Kubernetes can come back **disabled** after Docker Desktop is shut down, with the Kubernetes page offering **Create cluster** again. Click it, keep **Kubeadm**, then **Create** → **Install**. This restores the existing cluster (same node, Helm releases and saved results); it does not start from scratch. Only **Reset cluster** wipes it.
+   Kubernetes starts on its own with Docker Desktop as long as it's switched on; quitting or restarting Docker Desktop doesn't change that. If this reports `connection refused`, check `docker desktop kubernetes status`. `disabled` means Kubernetes was switched off in Docker Desktop (Settings → Kubernetes, or stopped from the Kubernetes page), and the Kubernetes page offers **Create cluster** again. Click it, keep **Kubeadm**, then **Create** → **Install**. This switches the existing cluster back on (same node, Helm releases and saved results); it does not start from scratch. Only **Reset cluster** wipes it.
 
 3. **Rebuild the image** if tests, config or dependencies changed since the last build:
 
@@ -461,7 +461,7 @@ From a cold start (Mac rebooted or Docker Desktop quit):
    npm run docker:build
    ```
 
-There are no long-running services to start for local or Docker runs. Helm releases and PVCs survive a Docker Desktop restart (checked: release `e2e`, its PVC and the saved report were all intact after a shutdown). The report server pod restarts with the cluster and serves the same report.
+There are no long-running services to start for local or Docker runs. Helm releases and PVCs survive a Docker Desktop restart, and also Kubernetes being switched off and on again. Both were checked: release `e2e`, its PVC and the saved report were intact each time, and after `docker desktop restart` the cluster was running again within about 20 seconds. The report server pod restarts with the cluster and serves the same report.
 
 ---
 
@@ -628,6 +628,8 @@ Do these in order; stop wherever you like.
    docker desktop stop
    ```
 
+   This is all you need to free up resources. Leave Kubernetes switched on in Docker Desktop and it will start again by itself next time.
+
 Optional clean-up:
 
 | To | Run |
@@ -730,7 +732,7 @@ helm template e2e helm/playwright-tests --set persistence.enabled=true --set rep
 | ------- | ----- | --- |
 | `Cannot connect to the Docker daemon` / `docker.sock: no such file` | Docker Desktop isn't running | `docker desktop start` |
 | `kubectl`: `connection refused` on `127.0.0.1:6443`, or `helm`: `kubernetes cluster unreachable` | Docker Desktop (and its cluster) stopped, or Kubernetes disabled | Start Docker Desktop; check `docker desktop kubernetes status` |
-| `docker desktop kubernetes status` says `disabled` after a restart; the Kubernetes page shows **Create cluster** | Kubernetes was switched off while Docker Desktop was shut down | **Create cluster** → **Kubeadm** → **Create** → **Install**. The existing cluster, releases and PVCs come back. Avoid **Reset cluster**, which wipes them. |
+| `docker desktop kubernetes status` says `disabled`; the Kubernetes page shows **Create cluster** | Kubernetes was switched off in Docker Desktop (Settings → Kubernetes, or stopped from the Kubernetes page). Quitting or restarting Docker Desktop does not do this. | **Create cluster** → **Kubeadm** → **Create** → **Install**. The existing cluster, releases and PVCs come back. Avoid **Reset cluster**, which wipes them. |
 | `current-context is not set` | No cluster context selected | `kubectl config use-context docker-desktop` |
 | Pod stuck in `ErrImagePull` / `ImagePullBackOff` | Image not built, or the cluster can't see local images (kind cluster type, or a remote cluster) | `npm run docker:build`; use the Kubeadm cluster type; or push to a registry and set `image.*` |
 | Job `Failed` immediately with `Project(s) "" not found` | An empty project name reached Playwright (fixed in the chart; seen with old chart versions) | Use the current chart; `--set 'tests.projects={}'` means all browsers |

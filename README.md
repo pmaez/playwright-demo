@@ -170,7 +170,7 @@ kubectl delete pvc e2e-playwright-tests-results   # saved results (kept on unins
 docker desktop stop                               # stops Docker and Kubernetes; nothing is deleted
 ```
 
-Start again later with `docker desktop start`. Helm releases and saved results survive the restart. If Kubernetes comes back disabled (the Kubernetes page shows **Create cluster**), create it again with **Kubeadm**: the existing cluster and its data come back. Only **Reset cluster** wipes them.
+Start again later with `docker desktop start`. Kubernetes starts by itself as long as it's still switched on in Docker Desktop, and Helm releases and saved results survive the restart. If Kubernetes was switched off in Docker Desktop (the Kubernetes page shows **Create cluster**), create it again with **Kubeadm**: the existing cluster and its data come back. Only **Reset cluster** wipes them.
 
 ## Environments
 
