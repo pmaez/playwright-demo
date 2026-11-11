@@ -1,4 +1,5 @@
-# Keep this tag in sync with the @playwright/test version in package-lock.json —
+# Keep this tag in sync with the @playwright/test version in package-lock.json and the
+# container image in .github/workflows/playwright.yml (CI fails if they differ) —
 # the image ships the browser builds that exact version expects.
 FROM mcr.microsoft.com/playwright:v1.65.0-noble
 

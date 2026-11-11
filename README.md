@@ -175,7 +175,9 @@ npx playwright test --grep @smoke
 - **Pull requests** run `@smoke`-tagged tests only (Chromium), for fast feedback.
 - **Pushes to `master`/`dev`** and manual runs (`workflow_dispatch`) run the full cross-browser suite.
 - Manual runs let you pick the `TEST_ENV` (`demo`, `dev`, `qa`, `uat`) from a dropdown.
-- Playwright browsers are cached by version; the HTML report and `test-results/` (traces on retry) are uploaded as workflow artifacts on every run.
+- The job runs inside the official `mcr.microsoft.com/playwright` image, which already contains the browsers and their system libraries, so nothing is downloaded or `apt`-installed at run time.
+- When upgrading Playwright, bump the image tag in both `.github/workflows/playwright.yml` and the `Dockerfile` to match `@playwright/test` in `package-lock.json`. The workflow's first step fails if any of the three differ.
+- The HTML report and `test-results/` (traces on retry) are uploaded as workflow artifacts on every run.
 
 `.github/workflows/container.yml` runs when the `Dockerfile`, Helm chart, dependencies, or Playwright config change. It builds the image, runs the smoke tests inside it, lints the chart, then installs the chart on a throwaway [kind](https://kind.sigs.k8s.io) cluster and checks that the test Job and report server work.
 

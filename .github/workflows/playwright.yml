@@ -21,39 +21,37 @@ jobs:
   test:
     timeout-minutes: 30
     runs-on: ubuntu-latest
+    # The official image ships Node, all three browsers and their OS libraries, so the job
+    # needs no browser download or apt-get install. Keep the tag in sync with
+    # @playwright/test in package-lock.json and the Dockerfile (checked below).
+    container:
+      image: mcr.microsoft.com/playwright:v1.65.0-noble
+      options: --user 1001
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: npm
+      - name: Check Playwright image tags match package-lock.json
+        run: |
+          expected=$(node -p "require('./package-lock.json').packages['node_modules/@playwright/test'].version")
+          status=0
+          for f in Dockerfile .github/workflows/playwright.yml; do
+            tags=$(grep -oE 'mcr\.microsoft\.com/playwright:v[0-9]+\.[0-9]+\.[0-9]+' "$f" | sed 's/.*:v//' | sort -u)
+            if [ -z "$tags" ]; then
+              echo "::error file=$f::No Playwright image tag found"
+              status=1
+            fi
+            for tag in $tags; do
+              if [ "$tag" != "$expected" ]; then
+                echo "::error file=$f::Playwright image is v$tag but package-lock.json has @playwright/test $expected"
+                status=1
+              fi
+            done
+          done
+          [ "$status" -eq 0 ] && echo "Image tags match @playwright/test $expected"
+          exit $status
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Get installed Playwright version
-        id: playwright-version
-        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Playwright browsers
-        uses: actions/cache@v6
-        id: playwright-cache
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-browsers-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
-
-      # Both steps apt-get install the browsers' system libraries; fail fast if apt stalls
-      # instead of holding the job until its 30-minute timeout.
-      - name: Install Playwright browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        timeout-minutes: 10
-        run: npx playwright install --with-deps
-
-      - name: Install Playwright OS dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        timeout-minutes: 5
-        run: npx playwright install-deps
 
       - name: Run smoke tests (PR)
         if: github.event_name == 'pull_request'
