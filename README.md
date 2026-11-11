@@ -1,13 +1,16 @@
 # Playwright Automation Template
 
-A template end-to-end test automation framework built with [Playwright](https://playwright.dev). It ships a Page Object Model, composable fixtures, per-environment configuration, a tagged test suite, and a CI workflow — all ready to point at your own application.
+A template end-to-end test automation framework built with [Playwright](https://playwright.dev). It ships a Page Object Model, composable fixtures, per-environment configuration, a tagged test suite, a Docker image, a Helm chart for Kubernetes, and CI workflows — all ready to point at your own application.
 
 The bundled `example` domain runs against the public [TodoMVC demo](https://demo.playwright.dev/todomvc) so the framework works out of the box. Replace it with your own domain by following the same pattern (see [Extending this template](#extending-this-template)).
 
+**Full reference:** [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md) covers architecture diagrams, versions, where files and results are stored, and how to install, start, run, and shut down everything.
+
 ## Requirements
 
-- Node.js
-- npm
+- Node.js and npm, for running tests locally
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/), optional, for [running in Docker](#running-in-docker)
+- Kubernetes and [Helm](https://helm.sh), optional, for [running on Kubernetes](#running-on-kubernetes-helm). Docker Desktop's built-in cluster works locally.
 
 ## Installation
 
@@ -15,11 +18,13 @@ The bundled `example` domain runs against the public [TodoMVC demo](https://demo
 npm install
 ```
 
-Playwright browser binaries are installed automatically as part of `@playwright/test`. If you need to (re)install them manually:
+Then download the browsers (Chromium, Firefox, WebKit) Playwright uses for local runs:
 
 ```bash
 npx playwright install
 ```
+
+Docker, Kubernetes and CI don't need this step: they use the official Playwright image, which already includes the browsers.
 
 ## Running tests
 
@@ -104,6 +109,23 @@ Inside the container, `CI=true` is set (retries, a single worker, `list` output 
 
 `helm/playwright-tests` runs the same image as a Kubernetes `Job`. Every `helm install` / `helm upgrade` starts a new run named `<release>-playwright-tests-<revision>`. The pod exits with Playwright's exit code, so the Job ends `Complete` or `Failed`.
 
+One-time local setup on a Mac:
+
+1. In Docker Desktop, open **Kubernetes** → **Create cluster** → choose **Kubeadm** → **Create**. With Kubeadm the cluster can use images you build locally, so no registry is needed.
+2. Install Helm:
+
+   ```bash
+   brew install helm
+   ```
+
+3. Check the cluster is ready:
+
+   ```bash
+   kubectl config use-context docker-desktop && kubectl get nodes
+   ```
+
+Then build the image and run the suite:
+
 ```bash
 # Local cluster (Docker Desktop's Kubernetes uses your local images directly;
 # for kind, load the image first: kind load docker-image playwright-tests:local)
@@ -136,7 +158,19 @@ Key values (see `helm/playwright-tests/values.yaml` for all of them):
 | `persistence.enabled` | Keep the HTML report and traces on a PVC | off |
 | `reportServer.enabled` | Serve the latest report from the PVC via nginx | off |
 
-To browse reports from the cluster, enable both `persistence` and `reportServer`. Then run `kubectl port-forward svc/<release>-playwright-tests-report 9323:80` and open `http://localhost:9323/playwright-report/`. The PVC is kept on `helm uninstall`; delete it yourself when you're done.
+To browse reports from the cluster, enable both `persistence` and `reportServer`. Then run `kubectl port-forward svc/<release>-playwright-tests-report 9323:80` and open `http://localhost:9323/playwright-report/`.
+
+To change settings on a re-run, add `--set` flags to `helm upgrade ... --reuse-values`. Use `--set 'tests.projects={}'` to go back to all browsers: setting a value to `null` doesn't clear it when values are reused.
+
+Shutting down:
+
+```bash
+helm uninstall e2e                                # removes Jobs, CronJob and report server
+kubectl delete pvc e2e-playwright-tests-results   # saved results (kept on uninstall on purpose)
+docker desktop stop                               # stops Docker and Kubernetes; nothing is deleted
+```
+
+Start again later with `docker desktop start`. Helm releases and saved results survive the restart. If Kubernetes comes back disabled (the Kubernetes page shows **Create cluster**), create it again with **Kubeadm**: the existing cluster and its data come back. Only **Reset cluster** wipes them.
 
 ## Environments
 
@@ -190,6 +224,8 @@ npx playwright test --grep @smoke
     container.yml        # Docker image + Helm chart checks
 config/
   environments.ts       # Per-environment base URLs and tags
+docs/
+  PROJECT_GUIDE.md       # Full reference: architecture, versions, install/run/shutdown
 helm/
   playwright-tests/      # Helm chart: test Job, optional CronJob, PVC, report server
 Dockerfile               # Test-runner image (entrypoint: playwright test)
