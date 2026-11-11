@@ -43,12 +43,16 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-browsers-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
+      # Both steps apt-get install the browsers' system libraries; fail fast if apt stalls
+      # instead of holding the job until its 30-minute timeout.
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 10
         run: npx playwright install --with-deps
 
       - name: Install Playwright OS dependencies
         if: steps.playwright-cache.outputs.cache-hit == 'true'
+        timeout-minutes: 5
         run: npx playwright install-deps
 
       - name: Run smoke tests (PR)
