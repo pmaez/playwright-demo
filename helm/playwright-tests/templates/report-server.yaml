@@ -1,0 +1,67 @@
+{{- if .Values.reportServer.enabled }}
+{{- if not .Values.persistence.enabled }}
+{{- fail "reportServer.enabled requires persistence.enabled=true (the report is read from the results PVC)" }}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "playwright-tests.fullname" . }}-report
+  labels:
+    {{- include "playwright-tests.labels" . | nindent 4 }}
+    app.kubernetes.io/component: report-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "playwright-tests.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: report-server
+  template:
+    metadata:
+      labels:
+        {{- include "playwright-tests.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: report-server
+    spec:
+      securityContext:
+        {{- toYaml .Values.reportServer.podSecurityContext | nindent 8 }}
+      containers:
+        - name: nginx
+          image: "{{ .Values.reportServer.image.repository }}:{{ .Values.reportServer.image.tag }}"
+          imagePullPolicy: {{ .Values.reportServer.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            tcpSocket:
+              port: http
+          resources:
+            {{- toYaml .Values.reportServer.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          # Mount the whole volume, not a subPath: Playwright deletes and recreates playwright-report/
+          # on every run, which would leave a subPath mount pointing at the deleted directory.
+          volumeMounts:
+            - name: results
+              mountPath: /usr/share/nginx/html
+              readOnly: true
+      volumes:
+        - name: results
+          persistentVolumeClaim:
+            claimName: {{ include "playwright-tests.pvcName" . }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "playwright-tests.fullname" . }}-report
+  labels:
+    {{- include "playwright-tests.labels" . | nindent 4 }}
+    app.kubernetes.io/component: report-server
+spec:
+  type: {{ .Values.reportServer.service.type }}
+  selector:
+    {{- include "playwright-tests.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: report-server
+  ports:
+    - name: http
+      port: {{ .Values.reportServer.service.port }}
+      targetPort: http
+{{- end }}

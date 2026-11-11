@@ -1,0 +1,31 @@
+{{- $fullname := include "playwright-tests.fullname" . -}}
+{{- if .Values.job.enabled }}
+Test run started: job/{{ $fullname }}-{{ .Release.Revision }}
+
+Follow the output:
+  kubectl logs -f -n {{ .Release.Namespace }} job/{{ $fullname }}-{{ .Release.Revision }}
+
+Check the result (Complete or Failed):
+  kubectl get job -n {{ .Release.Namespace }} {{ $fullname }}-{{ .Release.Revision }}
+
+Run again with the same settings:
+  helm upgrade {{ .Release.Name }} <chart> -n {{ .Release.Namespace }} --reuse-values
+{{- end }}
+{{- if .Values.cronJob.enabled }}
+
+Scheduled runs: cronjob/{{ $fullname }} ("{{ .Values.cronJob.schedule }}")
+Trigger one now:
+  kubectl create job -n {{ .Release.Namespace }} --from=cronjob/{{ $fullname }} {{ $fullname }}-manual-$(date +%s)
+{{- end }}
+{{- if .Values.reportServer.enabled }}
+
+View the latest HTML report:
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ $fullname }}-report 9323:{{ .Values.reportServer.service.port }}
+  open http://localhost:9323/playwright-report/
+{{- else if .Values.persistence.enabled }}
+
+Reports are kept on pvc/{{ include "playwright-tests.pvcName" . }}. Set reportServer.enabled=true to browse them.
+{{- else }}
+
+The HTML report is discarded with the pod. Set persistence.enabled=true to keep it.
+{{- end }}

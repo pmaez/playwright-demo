@@ -1,0 +1,6 @@
+apiVersion: v2
+name: playwright-tests
+description: Runs the Playwright end-to-end suite as a Kubernetes Job (or scheduled CronJob)
+type: application
+version: 0.1.0
+appVersion: "1.65.0"

@@ -1,0 +1,78 @@
+name: Container & Helm
+
+on:
+  push:
+    branches: [master, dev]
+    paths: &container-paths
+      - Dockerfile
+      - .dockerignore
+      - helm/**
+      - package.json
+      - package-lock.json
+      - playwright.config.ts
+      - .github/workflows/container.yml
+  pull_request:
+    branches: [master, dev]
+    paths: *container-paths
+  workflow_dispatch:
+
+env:
+  IMAGE: playwright-tests:ci
+  RELEASE: pw
+
+jobs:
+  container:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build image
+        run: docker build -t "$IMAGE" .
+
+      - name: Check image user matches the chart's securityContext
+        run: |
+          uid=$(docker run --rm --entrypoint id "$IMAGE" -u)
+          echo "pwuser uid: $uid"
+          test "$uid" = "1001" || { echo "::error::Update podSecurityContext in helm/playwright-tests/values.yaml to uid $uid"; exit 1; }
+
+      - name: Run smoke tests in Docker
+        run: |
+          mkdir -p docker-results && chmod 777 docker-results
+          docker run --rm --ipc=host -v "$PWD/docker-results:/results" "$IMAGE" --project chromium --grep @smoke
+          test -f docker-results/playwright-report/index.html
+
+      - name: Lint chart
+        run: |
+          helm lint helm/playwright-tests
+          helm lint helm/playwright-tests --set persistence.enabled=true,reportServer.enabled=true,cronJob.enabled=true
+          helm template "$RELEASE" helm/playwright-tests \
+            --set persistence.enabled=true,reportServer.enabled=true,cronJob.enabled=true \
+            --set 'tests.projects={chromium,firefox}' --set tests.grep=@smoke > /dev/null
+
+      - name: Create kind cluster
+        run: |
+          kind create cluster --wait 120s
+          kind load docker-image "$IMAGE"
+
+      - name: Install chart and wait for the test Job
+        run: |
+          helm install "$RELEASE" helm/playwright-tests \
+            --set image.tag=ci \
+            --set 'tests.projects={chromium}' --set tests.grep=@smoke \
+            --set persistence.enabled=true --set reportServer.enabled=true \
+            --wait --wait-for-jobs --timeout 10m
+          kubectl logs "job/$RELEASE-playwright-tests-1"
+
+      - name: Check the report server serves the report
+        run: |
+          kubectl port-forward "svc/$RELEASE-playwright-tests-report" 9323:80 &
+          sleep 5
+          curl -sf http://localhost:9323/playwright-report/ | grep -qi playwright
+
+      - name: Dump cluster state
+        if: failure()
+        run: |
+          kubectl get all,pvc -o wide || true
+          kubectl describe jobs,pods || true
+          kubectl logs -l app.kubernetes.io/instance="$RELEASE" --all-containers --tail=200 || true

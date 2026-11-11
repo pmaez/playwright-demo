@@ -13,7 +13,9 @@
     "test:tag": "playwright test --project chromium --grep",
     "test:report": "playwright show-report",
     "runner": "node runner/execution.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "docker:build": "docker build -t playwright-tests:local .",
+    "docker:test": "mkdir -p docker-results && docker run --rm --ipc=host -e TEST_ENV -e BASE_URL -v \"$PWD/docker-results:/results\" playwright-tests:local"
   },
   "keywords": [],
   "author": "",

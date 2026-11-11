@@ -1,0 +1,28 @@
+{{- if .Values.cronJob.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "playwright-tests.fullname" . }}
+  labels:
+    {{- include "playwright-tests.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.cronJob.schedule | quote }}
+  {{- with .Values.cronJob.timeZone }}
+  timeZone: {{ . | quote }}
+  {{- end }}
+  concurrencyPolicy: {{ .Values.cronJob.concurrencyPolicy }}
+  successfulJobsHistoryLimit: {{ .Values.cronJob.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.cronJob.failedJobsHistoryLimit }}
+  suspend: {{ .Values.cronJob.suspend }}
+  jobTemplate:
+    metadata:
+      labels:
+        {{- include "playwright-tests.labels" . | nindent 8 }}
+    spec:
+      backoffLimit: {{ .Values.job.backoffLimit }}
+      {{- with .Values.job.activeDeadlineSeconds }}
+      activeDeadlineSeconds: {{ . }}
+      {{- end }}
+      template:
+        {{- include "playwright-tests.podTemplate" . | nindent 8 }}
+{{- end }}

@@ -1,7 +1,21 @@
-import { defineConfig, devices } from '@playwright/test';
+import path from 'path';
+import { defineConfig, devices, type ReporterDescription } from '@playwright/test';
 import { getTestEnvironment } from './config/environments';
 
 const testEnvironment = getTestEnvironment();
+
+/* RESULTS_DIR relocates the HTML report and test-results (the Docker image sets it to /results). */
+const resultsDir = process.env.RESULTS_DIR;
+const reportDir = resultsDir ? path.join(resultsDir, 'playwright-report') : 'playwright-report';
+const outputDir = resultsDir ? path.join(resultsDir, 'test-results') : 'test-results';
+
+/* HTML report always; GitHub annotations on Actions; plain list output in other CI (containers, k8s). */
+const reporter: ReporterDescription[] = [['html', { outputFolder: reportDir }]];
+if (process.env.GITHUB_ACTIONS) {
+  reporter.push(['github']);
+} else if (process.env.CI) {
+  reporter.push(['list']);
+}
 
 /**
  * Read environment variables from file.
@@ -17,6 +31,7 @@ const testEnvironment = getTestEnvironment();
 export default defineConfig({
   testDir: './tests',
   testIgnore: ['**/_seed/**'],
+  outputDir,
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -26,7 +41,7 @@ export default defineConfig({
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: process.env.CI ? [['html'], ['github']] : 'html',
+  reporter,
   metadata: {
     environment: testEnvironment.name,
     environmentTags: testEnvironment.tags,

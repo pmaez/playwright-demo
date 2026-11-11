@@ -72,6 +72,72 @@ Options:
 
 Multiple tags are combined with AND semantics — `--tags smoke,example` runs only tests carrying both `@smoke` and `@example`.
 
+## Running in Docker
+
+The `Dockerfile` builds on the official `mcr.microsoft.com/playwright` image, which bundles all three browsers and their OS dependencies. Keep its tag in sync with the `@playwright/test` version in `package-lock.json`.
+
+```bash
+# Build the image (tagged playwright-tests:local)
+npm run docker:build
+
+# Run the full cross-browser suite
+npm run docker:test
+
+# Anything after `--` is passed to `playwright test`
+npm run docker:test -- --project chromium --grep @smoke
+
+# Pick the environment / base URL via the usual variables
+TEST_ENV=qa npm run docker:test
+```
+
+The image's entrypoint is `playwright test`, so with plain `docker run` the arguments after the image name go straight to Playwright:
+
+```bash
+docker run --rm --ipc=host -e TEST_ENV=demo playwright-tests:local --project firefox
+```
+
+Inside the container, `CI=true` is set (retries, a single worker, `list` output in the logs) and `RESULTS_DIR=/results` sends the HTML report and `test-results/` there. `npm run docker:test` mounts `./docker-results` at `/results`, so open `docker-results/playwright-report/index.html` after a run. Tests run as the image's non-root `pwuser` (uid 1001). On a Linux host where your uid differs, make `docker-results/` writable for that user first (e.g. `chmod 777 docker-results`).
+
+`--ipc=host` gives Chromium enough shared memory. Without it, large pages can crash the browser.
+
+## Running on Kubernetes (Helm)
+
+`helm/playwright-tests` runs the same image as a Kubernetes `Job`. Every `helm install` / `helm upgrade` starts a new run named `<release>-playwright-tests-<revision>`. The pod exits with Playwright's exit code, so the Job ends `Complete` or `Failed`.
+
+```bash
+# Local cluster (Docker Desktop's Kubernetes uses your local images directly;
+# for kind, load the image first: kind load docker-image playwright-tests:local)
+npm run docker:build
+
+helm install e2e helm/playwright-tests \
+  --set tests.env=demo \
+  --set 'tests.projects={chromium}' \
+  --set tests.grep=@smoke
+
+kubectl logs -f job/e2e-playwright-tests-1
+
+# Run again with the same settings
+helm upgrade e2e helm/playwright-tests --reuse-values
+```
+
+For a real cluster, push the image to a registry the cluster can pull from and set `image.repository` / `image.tag` (and `imagePullSecrets` if it's private).
+
+Key values (see `helm/playwright-tests/values.yaml` for all of them):
+
+| Value | Purpose | Default |
+| ----- | ------- | ------- |
+| `tests.env` | `TEST_ENV` (`demo`, `dev`, `qa`, `uat`) | `demo` |
+| `tests.baseURL` | `BASE_URL` override | (none) |
+| `tests.projects` | Browsers to run (`--project`) | all |
+| `tests.grep` / `tests.grepInvert` | Tag filters (`--grep` / `--grep-invert`) | (none) |
+| `tests.extraArgs` | Any other `playwright test` flags | `[]` |
+| `envFrom` / `extraEnv` | Inject app credentials from Secrets, or other variables | `[]` |
+| `cronJob.enabled` / `cronJob.schedule` | Scheduled runs | off / `0 6 * * *` |
+| `persistence.enabled` | Keep the HTML report and traces on a PVC | off |
+| `reportServer.enabled` | Serve the latest report from the PVC via nginx | off |
+
+To browse reports from the cluster, enable both `persistence` and `reportServer`. Then run `kubectl port-forward svc/<release>-playwright-tests-report 9323:80` and open `http://localhost:9323/playwright-report/`. The PVC is kept on `helm uninstall`; delete it yourself when you're done.
+
 ## Environments
 
 Environment configuration lives in `config/environments.ts` and is selected via the `TEST_ENV` variable (defaults to `demo`):
@@ -111,14 +177,20 @@ npx playwright test --grep @smoke
 - Manual runs let you pick the `TEST_ENV` (`demo`, `dev`, `qa`, `uat`) from a dropdown.
 - Playwright browsers are cached by version; the HTML report and `test-results/` (traces on retry) are uploaded as workflow artifacts on every run.
 
+`.github/workflows/container.yml` runs when the `Dockerfile`, Helm chart, dependencies, or Playwright config change. It builds the image, runs the smoke tests inside it, lints the chart, then installs the chart on a throwaway [kind](https://kind.sigs.k8s.io) cluster and checks that the test Job and report server work.
+
 ## Project structure
 
 ```
 .github/
   workflows/
     playwright.yml       # CI workflow (see Continuous integration above)
+    container.yml        # Docker image + Helm chart checks
 config/
   environments.ts       # Per-environment base URLs and tags
+helm/
+  playwright-tests/      # Helm chart: test Job, optional CronJob, PVC, report server
+Dockerfile               # Test-runner image (entrypoint: playwright test)
 runner/
   execution.js           # CLI wrapper around `playwright test`
 specs/

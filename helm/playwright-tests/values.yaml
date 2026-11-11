@@ -1,0 +1,113 @@
+image:
+  # Build locally with `npm run docker:build`, or push the image to a registry your cluster can pull from.
+  repository: playwright-tests
+  tag: local
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+tests:
+  # TEST_ENV: one of the environments in config/environments.ts (demo, dev, qa, uat).
+  env: demo
+  # Overrides the environment's base URL when set.
+  baseURL: ""
+  # Playwright projects (browsers) to run. Empty runs every project in playwright.config.ts.
+  projects: []
+  # Passed as --grep, e.g. "@smoke". Use "(?=.*@smoke)(?=.*@example)" to require several tags.
+  grep: ""
+  # Passed as --grep-invert.
+  grepInvert: ""
+  # Passed as --workers. Empty keeps the config default (1 when CI is set).
+  workers: ""
+  # Any other `playwright test` arguments, e.g. ["--retries=0", "--shard=1/2"].
+  extraArgs: []
+
+# Extra environment variables for the test container.
+extraEnv: []
+#  - name: MY_FLAG
+#    value: "true"
+
+# Load variables (e.g. app credentials) from existing Secrets or ConfigMaps.
+envFrom: []
+#  - secretRef:
+#      name: playwright-test-credentials
+
+# One-off run, created on every `helm install` / `helm upgrade` (named <release>-<revision>).
+job:
+  enabled: true
+  # Playwright already retries failed tests; don't rerun the whole pod.
+  backoffLimit: 0
+  activeDeadlineSeconds: 1800
+  # Delete finished Jobs (and their pods/logs) after this many seconds. Empty keeps them.
+  ttlSecondsAfterFinished: 86400
+
+# Scheduled runs.
+cronJob:
+  enabled: false
+  schedule: "0 6 * * *"
+  timeZone: ""
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  suspend: false
+
+# Keep the HTML report and test-results (traces) on a PersistentVolumeClaim.
+# Without it they are written to an emptyDir and discarded with the pod.
+# With ReadWriteOnce, the test pod and report server must land on the same node — fine on a
+# single-node cluster; on multi-node clusters use a ReadWriteMany storage class.
+persistence:
+  enabled: false
+  size: 1Gi
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+
+# Serves the latest HTML report from the PersistentVolumeClaim (requires persistence.enabled).
+reportServer:
+  enabled: false
+  image:
+    repository: nginxinc/nginx-unprivileged
+    tag: 1.31-alpine
+    pullPolicy: IfNotPresent
+  # nginx-unprivileged runs as uid 101; the report files are world-readable.
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 101
+    runAsGroup: 101
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 64Mi
+
+resources:
+  requests:
+    cpu: "1"
+    memory: 1Gi
+  limits:
+    memory: 2Gi
+
+# Browsers need more shared memory than the container default of 64Mi.
+shmSize: 1Gi
+
+# pwuser in the mcr.microsoft.com/playwright image is uid/gid 1001.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  fsGroup: 1001
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+podAnnotations: {}
+podLabels: {}
