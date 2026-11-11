@@ -51,8 +51,9 @@ spec:
     - name: playwright
       image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
       imagePullPolicy: {{ .Values.image.pullPolicy }}
+      {{- /* Empty entries are skipped: `--set 'tests.projects={}'` yields [""], not []. */}}
       args:
-        {{- range .Values.tests.projects }}
+        {{- range compact .Values.tests.projects }}
         - {{ printf "--project=%s" . | quote }}
         {{- end }}
         {{- with .Values.tests.grep }}
@@ -64,7 +65,7 @@ spec:
         {{- with .Values.tests.workers }}
         - {{ printf "--workers=%v" . | quote }}
         {{- end }}
-        {{- range .Values.tests.extraArgs }}
+        {{- range compact .Values.tests.extraArgs }}
         - {{ . | quote }}
         {{- end }}
       env:
